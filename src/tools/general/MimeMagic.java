@@ -208,22 +208,22 @@ public class MimeMagic {
 	public static String extractHtmlEncoding(String content){
 		if (content == null) return null;
 		String announcecharset = null;
-		
 		try{// First search for charset meta tag in the head
 			int headpos = content.indexOf("</head>");
-			if (headpos!=-1) {
-				String head = content.substring(0, headpos);
-				int charsetpos = -1;
+			if (headpos==-1) {
+				headpos = content.length();
+			}
+			String head = content.substring(0, headpos);
+			int charsetpos = -1;
+			if ( (charsetpos = head.indexOf("http-equiv=\"content-type\""))!=-1) {
 				//content type founded
-				if ( (charsetpos = head.indexOf("http-equiv=\"content-type\""))!=-1) {
-					int charsetend = head.indexOf(">",charsetpos);
-					charsetpos = head.indexOf("charset=",charsetpos);
-					if (charsetend!=-1 && charsetpos<charsetend)  charsetend = head.indexOf("\"",charsetpos);
-					if (charsetpos!=-1 && charsetend!=-1 && charsetpos<charsetend) {
-						//charset provided
-						announcecharset = getCharset(head.substring(charsetpos+CHARSETSIZE,charsetend).trim());
-						if (announcecharset!=null) return announcecharset;
-					}
+				int charsetend = head.indexOf(">",charsetpos);
+				charsetpos = head.indexOf("charset=",charsetpos);
+				if (charsetend!=-1 && charsetpos<charsetend)  charsetend = head.indexOf("\"",charsetpos);
+				if (charsetpos!=-1 && charsetend!=-1 && charsetpos<charsetend) {
+					//charset provided
+					announcecharset = getCharset(head.substring(charsetpos+CHARSETSIZE,charsetend).trim());
+					if (announcecharset!=null) return announcecharset;
 				}
 			}
 		}catch (Exception e){
@@ -283,16 +283,20 @@ public class MimeMagic {
 		if (ct.startsWith("<!doctype")){
 			int doctypepos = ct.indexOf(">");
 			if (doctypepos!=-1 ) {
-				doctype = ct.substring(0,ct.indexOf(">"));
+				doctype = ct.substring(0,doctypepos);
+				//System.err.println(doctype);
 				if (doctype.contains("xhtml 1")) {
 					idoctype=3;
 					contentencoding = extractXmlEncoding(ct);
 					if (contentencoding != null) return contentencoding;//XML declaration takes precedence
-				} else if (doctype.contains("html 4")) idoctype=2;//html 4.x
-				else if (doctype.contains("html")) idoctype=1;//html older than 4.x
+				} else if (doctype.contains("html 4")) {
+					idoctype=2;//html 4.x
+				} else if (doctype.contains("html")) {
+					idoctype=1;//html older than 4.x
+				}
 			}
 		} else if (ct.startsWith("<?xml")) idoctype=4;
-		
+		//System.err.println("idoctype:"+idoctype);
 		
 		if (contenttype.contains("xml") || idoctype==4){
 			contentencoding = extractXmlEncoding(ct);
@@ -304,6 +308,7 @@ public class MimeMagic {
 			if (contentencoding == null && httpencoding==null){
 				if (idoctype==1) return "us-ascii";
 				if (idoctype==2) return "ISO-8859-1";
+				if (idoctype==3) return "UTF-8";
 			}
 		}
 		//if (debug==1) System.err.println("Mimemagic:encoding 1:"+contentencoding);

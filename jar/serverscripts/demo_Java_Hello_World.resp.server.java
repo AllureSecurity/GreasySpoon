@@ -26,6 +26,7 @@ public void main(HttpMessage httpMessage){
            body = body.substring(0,pos1) + "<h1>hello Java world €ëùçàöâê </h1>" + body.substring(pos1);
            
            //reconfigure output encoding
+           /*
            pos1 = body.indexOf("<meta http-equiv=\"Content-Type\"");
            if (pos1==-1) pos1 = body.indexOf("<meta http-equiv=\"content-type\"");
            if (pos1>0){
@@ -40,7 +41,7 @@ public void main(HttpMessage httpMessage){
               body = body.substring(0,pos1)+"UTF-8" + body.substring(pos2);
            }
            httpMessage.rewriteHeader("Content-Type","text/html; charset=UTF-8");
-           
+          */ 
            httpMessage.setBody(body);
       }
       // httpMessage.toJson();

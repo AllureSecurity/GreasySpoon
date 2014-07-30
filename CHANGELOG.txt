@@ -1,6 +1,13 @@
 GreasySpoon CHANGELOG
 ==================================================
 
+GreasySpoon v1.0.9
+---------------------------------------------------
+Bug fix:
+	.fix IPV6 address parsing 
+	.fix encoding detection issues
+
+
 GreasySpoon v1.0.8
 ---------------------------------------------------
 Bug fix:

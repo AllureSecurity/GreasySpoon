@@ -775,7 +775,7 @@ public String getPendingErrors(){
 
 	/**
 	 * @return RIGHTS attached to the script
-	 * @see tools.httpserver.HttpConstants.RIGHTS
+	 * @see UrlTools.httpserver.HttpConstants.RIGHTS
 	 */
 	public final RIGHTS getRights() {
 		return rights;
@@ -784,7 +784,7 @@ public String getPendingErrors(){
 	/**
 	 * Update RIGHTS attached to the script
 	 * @param rights RIGHTS attached to the script
-	 * @see tools.httpserver.HttpConstants.RIGHTS
+	 * @see UrlTools.httpserver.HttpConstants.RIGHTS
 	 */
 	public final void setRights(RIGHTS rights) {
 		this.rights = rights;

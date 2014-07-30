@@ -8,7 +8,7 @@
     <!-- define properties -->
 	<!-- =============================================== -->
 	<property name="jdk.home" value="${java.home}"/>
-    <property name="version.number" value="1.0.8"/>
+    <property name="version.number" value="1.0.9"/>
     <property name="src.dir" value="src" />
     <property name="class.dir" value="bin" />
     <property name="jar.dir" value="jar" />
@@ -43,7 +43,7 @@
 	<!-- =============================================== -->
     <!-- default target when you just type "ant" -->
 	<!-- =============================================== -->
-    <target name="default" depends="compile,single-jar,combined-jar,copylibs">
+    <target name="default" depends="compile,combined-jar,copylibs">
     </target>
 	<!-- =============================================== -->
 	
@@ -55,19 +55,9 @@
 		<echo>Compiling...</echo>
 		<mkdir dir="${class.dir}"/>
     	<echo message="JDK home: ${jdk.home}" />
-		<javac fork="true" executable="javac" srcdir="${src.dir}" destdir="${class.dir}" nowarn="true" debug="true">
+		<javac fork="true" executable="javac" srcdir="${src.dir}" destdir="${class.dir}" nowarn="true" debug="false">
 		    <classpath refid="compile.classpath"/>
 		</javac>
-    </target>
-	<!-- =============================================== -->
-    
-	
-	<!-- =============================================== -->
-    <!-- make a single jar that just contains the greasyspoon code -->
-	<!-- =============================================== -->
-    <target name="single-jar" depends="copylibs">
-    	<echo>Building simple jar with external dependencies...</echo>
-		<jar destfile="${jar.dir}/greasyspoon-nodeps.jar" basedir="${class.dir}" excludes="**/\.*"/>
     </target>
 	<!-- =============================================== -->
     
@@ -109,10 +99,9 @@
 	    	      <section name="common">
 	    	        <attribute name="Specification-Title" value="GreasySpoon" />
 	    	        <attribute name="Specification-Version" value="${version.number}" />
-	    	        <attribute name="Specification-Vendor" value="Karel MITTIG" />
+	    	        <attribute name="Specification-Vendor" value="GreasySpoon" />
 	    	        <attribute name="Implementation-Title" value="GreasySpoon" />
 	    	        <attribute name="Implementation-Version" value="${version.number} ${TODAY_B}" />
-	    	        <attribute name="Implementation-Vendor" value="Karel MITTIG" />
 	    	      </section>
     	      <!-- finally, use the libs path -->
     	      <attribute name="Class-Path" value=". ./pkg/ext/tools.jar ./pkg/ext/jruby.jar ./pkg/ext/jruby-engine.jar ./pkg/ext/jython.jar" />
@@ -158,6 +147,7 @@
     			<exclude name="packaging/sys/commons-daemon-1.0.1/bin/src/support/config.guess"/>
     			<exclude name="packaging/sys/commons-daemon-1.0.1/bin/src/configure"/>
 				<exclude name="**/serverscripts/*.server.*"/>
+				<exclude name="**/log/**"/>
 			</tarfileset>
 	  		<tarfileset dir="${jar.dir}" prefix="greasyspoon-release-${version.number}-sources/${jar.dir}" username="greasyspoon" group="greasyspoon">
 	  			<include name="serverscripts/demo*.*"/>
@@ -187,13 +177,16 @@
 	  			<exclude name="**/*.gsx"/>
 	  			<exclude name="**/greasyspoon"/>
 	  			<exclude name="serverscripts/*.server.*"/>
+	  			<exclude name="**/log/**"/>
 	  		</tarfileset>
 	  		<tarfileset dir="${jar.dir}" prefix="greasyspoon-release-${version.number}" username="greasyspoon" group="greasyspoon">
 	  			<include name="serverscripts/demo*.*"/>
-	  			<include name="../*.txt"/>
 	  		</tarfileset>
     		<tarfileset dir="${jar.dir}" prefix="greasyspoon-release-${version.number}" filemode="755" username="greasyspoon" group="greasyspoon">
     			<include name="**/greasyspoon"/>
+    		</tarfileset>
+    		<tarfileset dir="." prefix="greasyspoon-release-${version.number}" filemode="755" username="greasyspoon" group="greasyspoon">
+    			<include name="*.txt"/>
     		</tarfileset>
 		</tar>
     </target>

@@ -80,9 +80,9 @@ public abstract class AbstractService extends IcapParser {
 
 	/** ICAP server instantiating this service*/
 	public IcapServer server;
-
+	
+	
 	static ConnectionsPool connectionsPool;
-
 
 	//	<------------------------------------------------------------------------->  
 	/**
@@ -820,7 +820,7 @@ public abstract class AbstractService extends IcapParser {
 	 * @throws Exception		
 	 */
 	public void parseHttpRequest(DataInputStream bufferedreader, StringBuilder requestHeader) throws Exception {
-		int traildot, i=0;
+		int traildot;
 		//		---
 		int headersize;// = this.i_req_body>0?this.i_req_body:this.i_null_body;
 
@@ -845,51 +845,60 @@ public abstract class AbstractService extends IcapParser {
 
 		//generate table containing headers values 
 		String[] heads = requestHeader.toString().split(CRLF);
-
+		firstline = heads[0];
 		//		---
-		String lowercaseheader;
-		for (String header_line:heads){        // HTTP Header Parsing
-			if (header_line.length()==0) break; // Empty line => header end =>  stop parsing
-			lowercaseheader = header_line.toLowerCase();
-			if (i==0) {//first line => extract request method, url, protocol, ...
-				this.firstline = header_line;
-				int pos = this.firstline.indexOf(' ');
-				this.httpmethod = this.firstline.substring(0,pos).trim().toUpperCase();//HTTP method: GET/POST/HEAD/CONNECT/DELETE/OPTIONS/...
-				if ( (pos=this.firstline.indexOf('?'))>0 ){
-					this.req_url_path = this.firstline.substring(this.httpmethod.length()+1,pos);
-					this.req_url_searchpart = this.firstline.substring(pos+1,this.firstline.lastIndexOf(" HTTP/1."));
-					this.req_url = this.req_url_path+"?"+this.req_url_searchpart;
-				} else {
-					this.req_url = this.firstline.substring(this.httpmethod.length()+1,this.firstline.lastIndexOf(" HTTP/1."));
-					this.req_url_path = this.req_url;
-				}
-				i++;
-			} else if (lowercaseheader.startsWith("host: ")){ // correct url if needed
+		//Parse other headers and store them as tag (lowercase) / value in a hash table
+		String tag, value;
+		for (int i=1; i<heads.length; i++){
+			if (heads[i].length()==0) break; // Empty line => header end =>  stop parsing
+			traildot = heads[i].indexOf(":");
+			if (traildot == -1) continue;
+			if (traildot+2>heads[i].length()) continue;
+			tag = heads[i].substring(0,traildot).toLowerCase();
+			value = heads[i].substring(traildot+2).trim();
+			if (value.equals("")) continue;
+			if (tag.equals("host")){ //correct URL if needed
 				//syntax= Host: www.host.com[:port]
-				if (header_line.indexOf(":",7)==-1) {
+				if ( (traildot = value.lastIndexOf(":")) == -1) {
 					//	if no port is specified, extract line
-					this.host = header_line.substring(6);
+					this.host = value;
+					
 				} else {
-					//	orelse extract up to ":" char
-					this.host = header_line.substring(6, header_line.indexOf(":",7));
+					//	check for IPv6 host
+					int p = value.indexOf(']'); 
+					if (p != -1 ) {
+						//this is an IPv6 name, i.e [2002:172:16:200::44] 
+						if (p>traildot) {
+							//no port indicated
+							this.host = value.substring(0, traildot);
+						} else {
+							//there is a port, i.e [2002:172:16:200::44]:8080
+							this.host = value.substring(0, p+1);
+						}
+					} else {
+						// this is a normal DNS name, extract up to ":" char
+						this.host = value.substring(0, traildot); 
+					}
 				}
 				if (!this.req_url.startsWith("http://") && !this.req_url.startsWith ("ftp://")) {
 					if (this.req_url.startsWith("/")){
 						this.req_url = "http://"+this.host+this.req_url;
 						this.req_url_path = "http://"+host+req_url_path;
 					} else {
+						//need a '/' between host and resource
 						this.req_url = "http://"+this.host+"/"+this.req_url;
-						this.req_url_path = "http://"+this.host+this.req_url_path;
+						this.req_url_path = "http://"+this.host+"/"+this.req_url_path;
 					}
 				}
-			} else if (header_line.toLowerCase().startsWith("content-length:")){
-				this.contentLength = Long.parseLong(header_line.substring(16).trim());
-				this.httpReqHeaders.put("content-length", contentLength+"");
-			} else { 
-				// general header => put it in hash table (no lazy parsing for the moment)
-				traildot = header_line.indexOf(":");
-				this.httpReqHeaders.put(lowercaseheader.substring(0,traildot), header_line.substring(traildot+2));
+				continue;
 			}
+			if (tag.equals("content-length")){
+				this.contentLength = Long.parseLong(value);
+				this.httpReqHeaders.put("content-length", value);
+				continue;
+			} 
+			// general header => put it in hash table (no lazy parsing for the moment)
+			this.httpReqHeaders.put(tag, value);
 		}//End for HTTP Request header parsing
 	}
 	//	<------------------------------------------------------------------------->    
@@ -950,6 +959,7 @@ public abstract class AbstractService extends IcapParser {
 			} else {
 				this.reqHeader.insert(this.reqHeader.length()-2, "Content-Type: " + newContentType+ "\r\n");
 			}
+			this.updateReqHeader("content-type",newContentType);
 			break;
 		case RESPMOD:
 			if (this.httpRespHeaders.containsKey("content-type")){
@@ -960,6 +970,7 @@ public abstract class AbstractService extends IcapParser {
 				this.resHeader.insert(this.resHeader.length()-2, "Content-Type: " + newContentType+ "\r\n");
 				//this.resHeader.delete(this.resHeader.length()-2,this.resHeader.length()).append("Content-Type: ").append(newContentType).append("\r\n\r\n");
 			}
+			this.updateRespHeader("content-type",newContentType);
 			break;
 		default:
 		}

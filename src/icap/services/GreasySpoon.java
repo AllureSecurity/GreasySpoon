@@ -35,6 +35,10 @@ import icap.services.resources.gs.SpoonScript;
 import icap.services.resources.gs.SpoonScriptException;
 import java.io.*;
 import java.net.*;
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
 import java.util.*;
 import javax.script.ScriptEngineFactory;
 import javax.script.ScriptEngineManager;
@@ -450,7 +454,7 @@ public class GreasySpoon extends AbstractService {
 			timing = (System.nanoTime()-timing)/1000000;
 			if (Log.isEnable()) Log.access(logstr.insert(0,String.format("%1$-4s [%2$-7s] [%3$-10s] ICAP/%4$-3s ", timing, type.toString(), servicename, 504)));
 			return 504;
-			
+
 		} catch (java.io.EOFException eof){
 			try{
 				bas.reset();
@@ -538,6 +542,7 @@ public class GreasySpoon extends AbstractService {
 			if (Log.isEnable()) logstr.append(" [no mime-type]");
 			return earlyResponse(bas);
 		}
+
 		//Check supported content types => skip services and return 204
 		if (!isMimeTypeSupported(contenttype, supportedContentTypes)){
 			if (Log.isEnable()) logstr.append(" [unsupported mime-type]");
@@ -608,7 +613,7 @@ public class GreasySpoon extends AbstractService {
 				contenttype = mimemagic;
 				if (charset!=null) contenttype+="; charset="+charset;
 				this.updateContentType(contenttype);
-				*/
+				 */
 				if (!isMimeTypeSupported(mimemagic, supportedContentTypes)){ //send unmodified response in 200
 					if (Log.isEnable()) logstr.append(" [mimemagic<>").append(mimemagic).append("][unsupported mime-type]");
 					if (initiallyGzipped) this.resBody = compress(this.resBody);
@@ -620,12 +625,21 @@ public class GreasySpoon extends AbstractService {
 
 		//----------------------------------------------------------
 		// GreasySpoon scripts must be inserted => lets do it
-		String content, encoding;
+		String content, encoding, declaredencoding=null;
 
 		try{//detect encoding for current content
 			encoding = this.getEncoding(contenttype);
-			if (Log.isEnable()) logstr.append(" [encoding/").append(encoding).append("]");
+			//System.err.println("encoding 1:" + encoding);
+			if (bodyavailable) {
+				String encoding_bis = enforceCharset(this.resBody.toByteArray(),new String[]{encoding, "UTF-8", "windows-1253", "ISO-8859-7"});
+				//System.err.println("encoding 2:" + encoding_bis);
+				if (!encoding_bis.equals(encoding)) {
+					declaredencoding = encoding;
+					encoding = encoding_bis;
+				}
+			}
 			//Parse content as String with good(?) encoding
+			if (Log.isEnable()) logstr.append(" [encoding/").append(encoding).append("]");
 			content = bodyavailable?(new String (this.resBody.toByteArray(),encoding)):("");
 		} catch (Exception e){
 			if (Log.isEnable()) logstr.append(" [unknown encoding]");
@@ -660,14 +674,17 @@ public class GreasySpoon extends AbstractService {
 					}
 					String encoding2 = this.getEncoding(ct, content);
 					if (encoding2!=null && !encoding2.equals(encoding)) {
-						encoding = encoding2;
-						if (Log.isEnable()) logstr.append(" [+oe/").append(encoding).append("]");
+						if (declaredencoding!=null && !declaredencoding.equals(encoding2) ){
+							encoding = encoding2;
+							if (Log.isEnable()) logstr.append(" [+oe/").append(encoding).append("]");
+						}
 					}
 				} catch (Exception e){}
-				
 				if (encoding!=null) {
+					//System.err.println("encoding content with:"+encoding);
 					this.resBody.write(content.getBytes(encoding));
 				} else {
+					//System.err.println("encoding content without encoding");
 					this.resBody.write(content.getBytes());	
 				}
 			}
@@ -701,7 +718,41 @@ public class GreasySpoon extends AbstractService {
 		//----------------------------------------------------------
 	}
 	//	<------------------------------------------------------------------------->
+	private static String enforceCharset(byte[] buffer, String[] charsets) {
+		Charset charset = null;
+		for (String charsetName : charsets) {
+			charset = detectCharset(buffer, Charset.forName(charsetName));
+			if (charset != null) {
+				break;
+			}
+		}
+		if (charset == null) return charsets[0];
+		return charset.displayName().toLowerCase();
+	}
 
+	private static Charset detectCharset(byte[] buffer, Charset charset) {
+		try {
+			CharsetDecoder decoder = charset.newDecoder();
+			decoder.reset();
+			boolean identified = identify(buffer, decoder);
+			if (identified) {
+				return charset;
+			} else {
+				return null;
+			}
+		} catch (Exception e) {
+			return null;
+		}
+	}
+
+	private static boolean identify(byte[] bytes, CharsetDecoder decoder) {
+		try {
+			decoder.decode(ByteBuffer.wrap(bytes));
+		} catch (CharacterCodingException e) {
+			return false;
+		}
+		return true;
+	}
 
 	//	<------------------------------------------------------------------------->   
 	/**
@@ -721,6 +772,7 @@ public class GreasySpoon extends AbstractService {
 				scriptsToApply.add(sps);
 			}
 		}
+		
 		// In case no script is applicable, return a 204 (abort response processing)  
 		if (scriptsToApply.size()==0) {
 			if (Log.isEnable()) logstr.append(" [no scripts to apply]");
@@ -767,8 +819,7 @@ public class GreasySpoon extends AbstractService {
 		//store initial content hash 
 		int intitialcontenthash = content==null?0:content.hashCode();
 		content = applyScripts(logstr, this, content, this.getReqUrl(), scriptsToApply);
-
-
+		
 		//----------------------------------------------------------
 		// Update request body only if it has been modified by scripts
 		// Avoid unnecessary manipulation, and also possible encoding issues
@@ -784,7 +835,7 @@ public class GreasySpoon extends AbstractService {
 		}
 		//----------------------------------------------------------
 
-		//recompress request if was compressed initially
+		//recompress request if it was compressed initially
 		if ( initiallyGzipped){ 
 			this.reqBody = compress(reqBody);
 			if (Log.isEnable()) logstr.append(" [gzip]"); 
@@ -875,8 +926,6 @@ public class GreasySpoon extends AbstractService {
 		return newcontent;
 	}
 	//	<------------------------------------------------------------------------->
-
-
 
 
 	///////////////////////////
