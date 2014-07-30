@@ -8,7 +8,7 @@
     <!-- define properties -->
 	<!-- =============================================== -->
 	<property name="jdk.home" value="${java.home}"/>
-    <property name="version.number" value="1.0.9"/>
+    <property name="version.number" value="1.0.10"/>
     <property name="src.dir" value="src" />
     <property name="class.dir" value="bin" />
     <property name="jar.dir" value="jar" />

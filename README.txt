@@ -1,5 +1,5 @@
 GreasySpoon
-Copyright (C) 2008-2013 Karel MITTIG.
+Copyright (C) 2008-2014 Karel MITTIG.
 ----------------------------------------
 ICAP server that helps creating value-added services over HTTP. It
 can be used to develop generic or specific functions, for example, ad insertion,

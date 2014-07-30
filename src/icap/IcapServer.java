@@ -79,7 +79,7 @@ public class IcapServer extends Thread implements Icap {
 	//public static boolean log = false;
 
 	/**Server version*/
-	public final static String version = "1.0.9";
+	public final static String version = "1.0.10";
 	
 		/**internal flag to check server availability*/
 	private boolean running=false;
